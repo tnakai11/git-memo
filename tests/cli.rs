@@ -16,7 +16,11 @@ fn adds_memo_commit() {
     let dir = tempdir().unwrap();
 
     // init repo
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
 
     // config user
     Command::new("git")
@@ -50,7 +54,11 @@ fn adds_memo_commit() {
 fn lists_memos() {
     let dir = tempdir().unwrap();
 
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
     Command::new("git")
         .args(["config", "user.name", "Test"])
         .current_dir(&dir)
@@ -82,7 +90,11 @@ fn lists_memos() {
 fn removes_memos() {
     let dir = tempdir().unwrap();
 
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
     Command::new("git")
         .args(["config", "user.name", "Test"])
         .current_dir(&dir)
@@ -117,7 +129,11 @@ fn removes_memos() {
 #[test]
 fn errors_when_missing_git_config() {
     let dir = tempdir().unwrap();
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
 
     // Use empty HOME so no global git config is found
     let empty_home = tempdir().unwrap();
@@ -134,7 +150,11 @@ fn errors_when_missing_git_config() {
 #[test]
 fn errors_on_invalid_category() {
     let dir = tempdir().unwrap();
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
     Command::new("git")
         .args(["config", "user.name", "Test"])
         .current_dir(&dir)
