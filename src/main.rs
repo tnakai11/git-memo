@@ -54,7 +54,13 @@ fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     };
 
     // Prepare author/committer signature from git config
-    let sig = repo.signature()?;
+    // Provide a clearer error if user.name or user.email are missing
+    let sig = repo.signature().map_err(|_| {
+        git2::Error::from_str(
+            "Git user.name and user.email must be set.\n\
+Run `git config --global user.name <name>` and `git config --global user.email <email>`",
+        )
+    })?;
 
     // Parent is refs/memo/<category> if exists
     let refname = format!("refs/memo/{category}");
