@@ -9,11 +9,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: [stable, beta, nightly]
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ matrix.toolchain }}
           profile: minimal
           override: true
+          components: clippy, rustfmt
+      - run: cargo fmt -- --check
+      - run: cargo clippy -- -D warnings
       - run: cargo test --verbose

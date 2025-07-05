@@ -16,7 +16,11 @@ fn adds_memo_commit() {
     let dir = tempdir().unwrap();
 
     // init repo
-    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
 
     // config user
     Command::new("git")
