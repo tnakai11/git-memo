@@ -113,3 +113,43 @@ fn removes_memos() {
         .assert()
         .failure();
 }
+
+#[test]
+fn errors_when_missing_git_config() {
+    let dir = tempdir().unwrap();
+    Command::new("git").arg("init").current_dir(&dir).assert().success();
+
+    // Use empty HOME so no global git config is found
+    let empty_home = tempdir().unwrap();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .env("HOME", empty_home.path())
+        .args(["add", "todo", "msg"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("user.name and user.email"));
+}
+
+#[test]
+fn errors_on_invalid_category() {
+    let dir = tempdir().unwrap();
+    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "bad category", "msg"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not valid"));
+}
