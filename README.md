@@ -30,7 +30,7 @@ Once built, make sure the resulting binary is in your PATH so you can call `git 
 
 ## Planned dependencies
 
-- Rust (edition 2021)
+- Rust (edition 2024)
 - Cargo for building and running tests
 - libgit2 bindings (via [git2-rs](https://github.com/rust-lang/git2-rs)) to manipulate Git repositories
 
