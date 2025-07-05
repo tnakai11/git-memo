@@ -86,7 +86,10 @@ Run `git config --global user.name <name>` and `git config --global user.email <
 
     // Parent is refs/memo/<category> if exists
     let refname = format!("refs/memo/{category}");
-    let parent = repo.refname_to_id(&refname).ok().and_then(|oid| repo.find_commit(oid).ok());
+    let parent = repo
+        .refname_to_id(&refname)
+        .ok()
+        .and_then(|oid| repo.find_commit(oid).ok());
     let parents = parent.iter().collect::<Vec<_>>();
 
     let commit_oid = repo.commit(Some(&refname), &sig, &sig, message, &tree, &parents)?;
