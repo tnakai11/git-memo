@@ -14,6 +14,12 @@ $ git memo add todo "Finish writing README"
 
 # show the log of todo memos
 $ git log refs/memo/todo
+
+# alternatively use the built-in list subcommand
+$ git memo list todo
+
+# remove all todo memos
+$ git memo remove todo
 ```
 
 Each memo is an empty commit so repository history is unaffected. Categories live under their own refs and can be removed or archived independently.
