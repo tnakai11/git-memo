@@ -40,6 +40,9 @@ $ git memo list todo --json
 $ git memo categories --json
 ```
 
+# show the contents of a memo commit
+$ git memo show <hash>
+
 # edit the latest memo message
 $ git memo edit todo "updated message"
 
