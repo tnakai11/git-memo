@@ -13,6 +13,10 @@ By storing memos in Git, agents gain a stable history that survives checkouts or
 ```
 # record a memo under refs/memo/todo
 $ git memo add todo "Finish writing README"
+# read a multi-line message from stdin
+$ cat msg.txt | git memo add todo -
+
+When the message is `-`, `git memo` reads the memo text from standard input.
 
 # show the log of todo memos
 $ git log refs/memo/todo

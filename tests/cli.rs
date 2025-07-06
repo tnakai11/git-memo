@@ -51,6 +51,42 @@ fn adds_memo_commit() {
 }
 
 #[test]
+fn adds_memo_from_stdin() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "-"])
+        .write_stdin("line one\nline two\n")
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%B", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).contains("line one"));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("line two"));
+}
+
+#[test]
 fn lists_memos() {
     let dir = tempdir().unwrap();
 

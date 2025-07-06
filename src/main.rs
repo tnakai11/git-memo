@@ -15,6 +15,7 @@ enum Commands {
         /// Category for the memo
         category: String,
         /// Memo message
+        #[arg(allow_hyphen_values = true)]
         message: String,
     },
     /// List memos for a category
@@ -100,8 +101,23 @@ fn main() {
 
 fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     use git2::Repository;
+    use std::io::Read;
 
     let repo = Repository::discover(".")?;
+
+    // Read message from stdin if requested
+    let mut stdin_message = String::new();
+    let message = if message == "-" {
+        std::io::stdin()
+            .read_to_string(&mut stdin_message)
+            .map_err(|e| git2::Error::from_str(&format!("Failed to read stdin: {e}")))?;
+        while stdin_message.ends_with('\n') {
+            stdin_message.pop();
+        }
+        &stdin_message
+    } else {
+        message
+    };
 
     // Determine tree for the commit: use HEAD tree if exists, else empty tree
     let tree = match repo.head() {
