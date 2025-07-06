@@ -42,6 +42,24 @@ git push origin 'refs/memo/*:refs/memo/*'
 
 Fetching works the same way and allows agents to sync their memory across machines.
 
+## Automating remote pushes
+
+For collaborative setups it's convenient to push memo references immediately
+after they are written. A helper script is available under
+`scripts/push-memos.sh` which pushes all memo categories to a remote (defaults
+to `origin`). You can call this script manually or install it as a Git hook.
+
+```sh
+# push all memos to the default remote
+scripts/push-memos.sh
+
+# install as a post-commit hook
+ln -s ../../scripts/push-memos.sh .git/hooks/post-commit
+```
+
+Running the script ensures `refs/memo/*` are kept in sync with your remote
+repository.
+
 ## Setup
 
 The project is planned as a Rust CLI distributed through Cargo:
