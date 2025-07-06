@@ -29,6 +29,12 @@ $ git memo categories
 $ git memo list-categories
 
 Categories are printed in alphabetical order for easy scanning.
+For machine-readable output, pass `--json` to either command:
+
+```bash
+$ git memo list todo --json
+$ git memo categories --json
+```
 
 # edit the latest memo message
 $ git memo edit todo "updated message"
