@@ -86,11 +86,12 @@ $ cargo build --release
 
 Once built, make sure the resulting binary is in your PATH so you can call `git memo`.
 
-Before recording memos, configure your Git username and email so commits can be created:
+Before recording memos, configure your Git username so commits can be created.
+Setting `user.email` is optional:
 
 ```
 $ git config --global user.name "Your Name"
-$ git config --global user.email "you@example.com"
+$ git config --global user.email "you@example.com" # optional
 ```
 
 ## Planned dependencies
