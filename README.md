@@ -18,6 +18,12 @@ $ cat msg.txt | git memo add todo -
 
 When the message is `-`, `git memo` reads the memo text from standard input.
 
+# set today's date at midnight
+$ git memo add todo "Finish writing README" --today
+
+# specify an exact author date
+$ git memo add todo "old note" --at 2020-01-02T03:04:05Z
+
 # show the log of todo memos
 $ git log refs/memo/todo
 
