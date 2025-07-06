@@ -87,6 +87,41 @@ fn lists_memos() {
 }
 
 #[test]
+fn lists_memos_json() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["list", "todo", "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("first memo"))
+        .stdout(predicate::str::contains("\"oid\""));
+}
+
+#[test]
 fn lists_categories() {
     let dir = tempdir().unwrap();
 
@@ -124,6 +159,47 @@ fn lists_categories() {
         .success()
         .stdout(predicate::str::contains("todo"))
         .stdout(predicate::str::contains("idea"));
+}
+
+#[test]
+fn lists_categories_json() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "idea", "another"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["categories", "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("todo"))
+        .stdout(predicate::str::contains("idea"))
+        .stdout(predicate::str::starts_with("["));
 }
 
 #[test]

@@ -1,4 +1,5 @@
 use clap::{CommandFactory, Parser, Subcommand};
+use serde_json::json;
 
 #[derive(Parser)]
 #[command(name = "git-memo", about = "Record memos using Git")]
@@ -20,6 +21,9 @@ enum Commands {
     List {
         /// Category to list
         category: String,
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
     },
     /// Remove all memos for a category
     Remove {
@@ -28,7 +32,11 @@ enum Commands {
     },
     /// List all memo categories
     #[command(alias = "list-categories")]
-    Categories,
+    Categories {
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
     /// Edit the most recent memo in a category
     Edit {
         /// Category containing the memo
@@ -53,8 +61,8 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Some(Commands::List { category }) => {
-            if let Err(e) = list_memos(&category) {
+        Some(Commands::List { category, json }) => {
+            if let Err(e) = list_memos(&category, json) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -65,8 +73,8 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Some(Commands::Categories) => {
-            if let Err(e) = list_categories() {
+        Some(Commands::Categories { json }) => {
+            if let Err(e) = list_categories(json) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -135,7 +143,7 @@ fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     Ok(())
 }
 
-fn list_memos(category: &str) -> Result<(), git2::Error> {
+fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
     use git2::{Repository, Sort};
 
     let repo = Repository::discover(".")?;
@@ -147,11 +155,19 @@ fn list_memos(category: &str) -> Result<(), git2::Error> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::REVERSE)?;
     revwalk.push_ref(&refname)?;
+    let mut memos = Vec::new();
     for oid in revwalk {
         let oid = oid?;
         let commit = repo.find_commit(oid)?;
-        let message = commit.summary().unwrap_or("");
-        println!("{oid} {message}");
+        let message = commit.summary().unwrap_or("").to_string();
+        if json_output {
+            memos.push(json!({ "oid": oid.to_string(), "message": message }));
+        } else {
+            println!("{oid} {message}");
+        }
+    }
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&memos).unwrap());
     }
     Ok(())
 }
@@ -173,7 +189,7 @@ fn remove_memos(category: &str) -> Result<(), git2::Error> {
     Ok(())
 }
 
-fn list_categories() -> Result<(), git2::Error> {
+fn list_categories(json_output: bool) -> Result<(), git2::Error> {
     use git2::Repository;
     use std::collections::BTreeSet;
 
@@ -189,8 +205,12 @@ fn list_categories() -> Result<(), git2::Error> {
             categories.insert(cat.to_string());
         }
     }
-    for cat in categories {
-        println!("{cat}");
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&categories).unwrap());
+    } else {
+        for cat in categories {
+            println!("{cat}");
+        }
     }
     Ok(())
 }
