@@ -177,10 +177,11 @@ fn list_categories() -> Result<(), git2::Error> {
     let mut categories = BTreeSet::new();
     for reference in refs {
         let reference = reference?;
-        if let Some(name) = reference.name() {
-            if let Some(cat) = name.strip_prefix("refs/memo/") {
-                categories.insert(cat.to_string());
-            }
+        if let Some(cat) = reference
+            .name()
+            .and_then(|name| name.strip_prefix("refs/memo/"))
+        {
+            categories.insert(cat.to_string());
         }
     }
     for cat in categories {
