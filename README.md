@@ -104,11 +104,11 @@ $ git config --global user.name "Your Name"
 $ git config --global user.email "you@example.com" # optional
 ```
 
-## Planned dependencies
+## Dependencies
 
 - Rust (edition 2024)
-- Cargo for building and running tests
-- libgit2 bindings (via [git2-rs](https://github.com/rust-lang/git2-rs)) to manipulate Git repositories
+- Cargo
+- [git2-rs](https://github.com/rust-lang/git2-rs) and [serde_json](https://github.com/serde-rs/json)
 
-This repository is still in the bootstrapping phase. Contributions and feedback are welcome!
+Contributions and feedback are welcome!
 
