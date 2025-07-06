@@ -238,3 +238,49 @@ pub fn archive_category(category: &str) -> Result<(), git2::Error> {
     }
     Ok(())
 }
+
+/// Search all memo commits for a pattern.
+///
+/// This runs `git log --grep=<pattern> refs/memo/*` and prints the matching
+/// commit messages to stdout.
+pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
+    use std::path::Path;
+    use std::process::Command;
+
+    let repo = open_repo()?;
+    let workdir = repo.workdir().unwrap_or_else(|| Path::new("."));
+
+    let refs = repo.references_glob("refs/memo/*")?;
+    let mut args = vec![
+        "log".to_string(),
+        "--format=%s".into(),
+        "--grep".into(),
+        pattern.to_string(),
+    ];
+    for reference in refs {
+        let reference = reference?;
+        if let Some(name) = reference.name() {
+            args.push(name.to_string());
+        }
+    }
+
+    if args.len() == 4 {
+        println!("No memos found");
+        return Ok(());
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .current_dir(workdir)
+        .output()
+        .map_err(|e| git2::Error::from_str(&format!("Failed to run git log: {e}")))?;
+
+    if !output.status.success() {
+        return Err(git2::Error::from_str(&String::from_utf8_lossy(
+            &output.stderr,
+        )));
+    }
+
+    print!("{}", String::from_utf8_lossy(&output.stdout));
+    Ok(())
+}

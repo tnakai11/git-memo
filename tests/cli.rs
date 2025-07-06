@@ -516,3 +516,43 @@ fn adds_memo_with_custom_date() {
         "2020-01-02 03:04:05 +0000"
     );
 }
+
+#[test]
+fn greps_memos() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "hello world"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "another note"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["grep", "hello"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hello world"))
+        .stdout(predicate::str::contains("another note").not());
+}
