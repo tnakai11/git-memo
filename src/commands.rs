@@ -15,7 +15,7 @@ pub fn open_repo() -> Result<Repository, git2::Error> {
 ///
 /// `user.name` must be set while `user.email` is optional. If no email is
 /// configured, "none" is used.
-pub fn make_signature(repo: &Repository) -> Result<Signature, git2::Error> {
+pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
     let config = repo.config()?;
     let name = config.get_string("user.name").map_err(|_| {
         git2::Error::from_str(
