@@ -1,4 +1,4 @@
-use git2::{Repository, Sort};
+use git2::{Repository, Signature, Sort};
 use serde_json::json;
 
 use std::collections::BTreeSet;
@@ -9,6 +9,24 @@ use std::collections::BTreeSet;
 /// parent directories until a repository is found.
 pub fn open_repo() -> Result<Repository, git2::Error> {
     Repository::discover(".")
+}
+
+/// Create a signature using the repository's `user.name` and `user.email`.
+///
+/// `user.name` must be set while `user.email` is optional. If no email is
+/// configured, "none" is used.
+pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
+    let config = repo.config()?;
+    let name = config.get_string("user.name").map_err(|_| {
+        git2::Error::from_str(
+            "Git user.name must be set.\nRun `git config --global user.name <name>`",
+        )
+    })?;
+    let mut email = config.get_string("user.email").unwrap_or_default();
+    if email.trim().is_empty() {
+        email = "none".to_string();
+    }
+    git2::Signature::now(&name, &email)
 }
 
 /// Add a memo as a Git commit under `refs/memo/<category>`.
@@ -63,18 +81,7 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     };
 
     // Prepare author/committer signature from git config
-    // Allow missing user.email but still require user.name
-    let config = repo.config()?;
-    let name = config.get_string("user.name").map_err(|_| {
-        git2::Error::from_str(
-            "Git user.name must be set.\nRun `git config --global user.name <name>`",
-        )
-    })?;
-    let mut email = config.get_string("user.email").unwrap_or_default();
-    if email.trim().is_empty() {
-        email = "none".to_string();
-    }
-    let sig = git2::Signature::now(&name, &email)?;
+    let sig = make_signature(&repo)?;
 
     // Parent is refs/memo/<category> if exists
     let refname = format!("refs/memo/{category}");
@@ -189,7 +196,7 @@ pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     };
     let commit = repo.find_commit(oid)?;
     let tree = commit.tree()?;
-    let sig = repo.signature()?;
+    let sig = make_signature(&repo)?;
     let new_oid = commit.amend(
         Some(&refname),
         Some(&sig),
