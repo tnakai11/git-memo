@@ -1,6 +1,9 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use serde_json::json;
 
+mod commands;
+use commands::open_repo;
+
 #[derive(Parser)]
 #[command(name = "git-memo", about = "Record memos using Git")]
 struct Cli {
@@ -100,10 +103,9 @@ fn main() {
 }
 
 fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
-    use git2::Repository;
     use std::io::Read;
 
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
 
     // Read message from stdin if requested
     let mut stdin_message = String::new();
@@ -160,9 +162,9 @@ fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 }
 
 fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
-    use git2::{Repository, Sort};
+    use git2::Sort;
 
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     if repo.refname_to_id(&refname).is_err() {
         println!("No memos found for category {category}");
@@ -189,9 +191,7 @@ fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
 }
 
 fn remove_memos(category: &str) -> Result<(), git2::Error> {
-    use git2::Repository;
-
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     match repo.find_reference(&refname) {
         Ok(mut reference) => {
@@ -206,10 +206,9 @@ fn remove_memos(category: &str) -> Result<(), git2::Error> {
 }
 
 fn list_categories(json_output: bool) -> Result<(), git2::Error> {
-    use git2::Repository;
     use std::collections::BTreeSet;
 
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
     let refs = repo.references_glob("refs/memo/*")?;
     let mut categories = BTreeSet::new();
     for reference in refs {
@@ -232,9 +231,7 @@ fn list_categories(json_output: bool) -> Result<(), git2::Error> {
 }
 
 fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
-    use git2::Repository;
-
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     let oid = match repo.refname_to_id(&refname) {
         Ok(id) => id,
@@ -259,9 +256,7 @@ fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 }
 
 fn archive_category(category: &str) -> Result<(), git2::Error> {
-    use git2::Repository;
-
-    let repo = Repository::discover(".")?;
+    let repo = open_repo()?;
     let src = format!("refs/memo/{category}");
     let dst = format!("refs/archive/{category}");
     match repo.find_reference(&src) {
