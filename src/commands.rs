@@ -1,5 +1,6 @@
 use git2::{Repository, Signature, Sort};
 use serde_json::json;
+use which::which;
 
 use std::collections::BTreeSet;
 
@@ -226,5 +227,53 @@ pub fn archive_category(category: &str) -> Result<(), git2::Error> {
             println!("No memos found for category {category}");
         }
     }
+    Ok(())
+}
+
+/// Show the full commit message for a memo by hash.
+///
+/// If the `bat` or `delta` commands are available, they are used for syntax
+/// highlighting. Otherwise the message is printed directly to stdout.
+pub fn show_memo(hash: &str) -> Result<(), git2::Error> {
+    use git2::Oid;
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let repo = open_repo()?;
+    let oid = Oid::from_str(hash)?;
+    let commit = repo.find_commit(oid)?;
+    let body = commit.message().unwrap_or("");
+
+    if which("bat").is_ok() {
+        let mut child = Command::new("bat")
+            .args(["--paging=never", "--plain"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .map_err(|e| git2::Error::from_str(&format!("Failed to run bat: {e}")))?;
+        if let Some(stdin) = child.stdin.as_mut() {
+            stdin
+                .write_all(body.as_bytes())
+                .map_err(|e| git2::Error::from_str(&format!("Failed to write to bat: {e}")))?;
+        }
+        child
+            .wait()
+            .map_err(|e| git2::Error::from_str(&format!("Failed to wait on bat: {e}")))?;
+    } else if which("delta").is_ok() {
+        let mut child = Command::new("delta")
+            .stdin(Stdio::piped())
+            .spawn()
+            .map_err(|e| git2::Error::from_str(&format!("Failed to run delta: {e}")))?;
+        if let Some(stdin) = child.stdin.as_mut() {
+            stdin
+                .write_all(body.as_bytes())
+                .map_err(|e| git2::Error::from_str(&format!("Failed to write to delta: {e}")))?;
+        }
+        child
+            .wait()
+            .map_err(|e| git2::Error::from_str(&format!("Failed to wait on delta: {e}")))?;
+    } else {
+        println!("{}", body);
+    }
+
     Ok(())
 }

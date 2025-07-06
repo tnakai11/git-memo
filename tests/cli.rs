@@ -418,6 +418,47 @@ fn adds_memo_without_email() {
 }
 
 #[test]
+fn shows_memo_contents() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "show memo"])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["rev-parse", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    let hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["show", &hash])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("show memo"));
+}
+
+#[test]
 fn errors_on_invalid_category() {
     let dir = tempdir().unwrap();
     Command::new("git")
