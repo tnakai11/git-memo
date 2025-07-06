@@ -443,3 +443,76 @@ fn errors_on_invalid_category() {
         .failure()
         .stderr(predicate::str::contains("not valid"));
 }
+
+#[test]
+fn adds_memo_with_today_date() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "msg", "--today"])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%ai", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    let expected = format!("{} 00:00:00 +0000", chrono::Utc::now().format("%Y-%m-%d"));
+    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), expected);
+}
+
+#[test]
+fn adds_memo_with_custom_date() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    let date_str = "2020-01-02T03:04:05+00:00";
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "msg", "--at", date_str])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%ai", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "2020-01-02 03:04:05 +0000"
+    );
+}

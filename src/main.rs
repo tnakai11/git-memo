@@ -19,6 +19,12 @@ enum Commands {
         /// Memo message
         #[arg(allow_hyphen_values = true)]
         message: String,
+        /// Set the author date to midnight today
+        #[arg(long, conflicts_with = "at")]
+        today: bool,
+        /// Set a specific author datetime in RFC3339
+        #[arg(long, value_name = "datetime", conflicts_with = "today")]
+        at: Option<String>,
     },
     /// List memos for a category
     List {
@@ -79,7 +85,30 @@ fn run() -> Result<(), git2::Error> {
 /// Execute an individual CLI command.
 fn handle_command(cmd: Commands) -> Result<(), git2::Error> {
     match cmd {
-        Commands::Add { category, message } => add_memo(&category, &message),
+        Commands::Add {
+            category,
+            message,
+            today,
+            at,
+        } => {
+            let when = if today {
+                use chrono::{Datelike, TimeZone, Utc};
+                let now = Utc::now();
+                let dt = Utc
+                    .with_ymd_and_hms(now.year(), now.month(), now.day(), 0, 0, 0)
+                    .single()
+                    .unwrap();
+                Some(git2::Time::new(dt.timestamp(), 0))
+            } else if let Some(at) = at {
+                let dt = chrono::DateTime::parse_from_rfc3339(&at)
+                    .map_err(|e| git2::Error::from_str(&format!("invalid datetime: {e}")))?;
+                let offset = dt.offset().local_minus_utc() / 60;
+                Some(git2::Time::new(dt.timestamp(), offset))
+            } else {
+                None
+            };
+            add_memo(&category, &message, when)
+        }
         Commands::List { category, json } => list_memos(&category, json),
         Commands::Remove { category } => remove_memos(&category),
         Commands::Categories { json } => list_categories(json),

@@ -15,7 +15,10 @@ pub fn open_repo() -> Result<Repository, git2::Error> {
 ///
 /// `user.name` must be set while `user.email` is optional. If no email is
 /// configured, "none" is used.
-pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
+pub fn make_signature(
+    repo: &Repository,
+    when: Option<git2::Time>,
+) -> Result<Signature<'_>, git2::Error> {
     let config = repo.config()?;
     let name = config.get_string("user.name").map_err(|_| {
         git2::Error::from_str(
@@ -26,7 +29,10 @@ pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
     if email.trim().is_empty() {
         email = "none".to_string();
     }
-    git2::Signature::now(&name, &email)
+    match when {
+        Some(time) => git2::Signature::new(&name, &email, &time),
+        None => git2::Signature::now(&name, &email),
+    }
 }
 
 /// Add a memo as a Git commit under `refs/memo/<category>`.
@@ -44,11 +50,15 @@ pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
 /// use git_memo::add_memo;
 ///
 /// fn main() -> Result<(), git2::Error> {
-///     add_memo("todo", "write docs")?;
+///     add_memo("todo", "write docs", None)?;
 ///     Ok(())
 /// }
 /// ```
-pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
+pub fn add_memo(
+    category: &str,
+    message: &str,
+    when: Option<git2::Time>,
+) -> Result<(), git2::Error> {
     use std::io::Read;
 
     let repo = open_repo()?;
@@ -81,7 +91,7 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     };
 
     // Prepare author/committer signature from git config
-    let sig = make_signature(&repo)?;
+    let sig = make_signature(&repo, when)?;
 
     // Parent is refs/memo/<category> if exists
     let refname = format!("refs/memo/{category}");
@@ -196,7 +206,7 @@ pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     };
     let commit = repo.find_commit(oid)?;
     let tree = commit.tree()?;
-    let sig = make_signature(&repo)?;
+    let sig = make_signature(&repo, None)?;
     let new_oid = commit.amend(
         Some(&refname),
         Some(&sig),
