@@ -3,10 +3,33 @@ use serde_json::json;
 
 use std::collections::BTreeSet;
 
+/// Discover the nearest Git repository starting from the current directory.
+///
+/// This is a small wrapper around [`Repository::discover`] that searches
+/// parent directories until a repository is found.
 pub fn open_repo() -> Result<Repository, git2::Error> {
     Repository::discover(".")
 }
 
+/// Add a memo as a Git commit under `refs/memo/<category>`.
+///
+/// The commit author is determined from the repository's `user.name` and
+/// `user.email` configuration. Pass `"-"` as `message` to read the contents
+/// from standard input.
+///
+/// # Parameters
+/// - `category`: Name of the memo category.
+/// - `message`: Commit message or `"-"` to read from stdin.
+///
+/// # Examples
+/// ```no_run
+/// use git_memo::add_memo;
+///
+/// fn main() -> Result<(), git2::Error> {
+///     add_memo("todo", "write docs")?;
+///     Ok(())
+/// }
+/// ```
 pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     use std::io::Read;
 
@@ -66,6 +89,14 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     Ok(())
 }
 
+/// Print all memos recorded for `category`.
+///
+/// When `json_output` is `true`, a JSON array of objects containing the memo
+/// OID and message is written to stdout instead of plain text.
+///
+/// # Parameters
+/// - `category`: The memo category to display.
+/// - `json_output`: Enable JSON output when set to `true`.
 pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
@@ -93,6 +124,10 @@ pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> 
     Ok(())
 }
 
+/// Delete the reference storing all memos for `category`.
+///
+/// # Parameters
+/// - `category`: The memo category to remove.
 pub fn remove_memos(category: &str) -> Result<(), git2::Error> {
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
@@ -108,6 +143,12 @@ pub fn remove_memos(category: &str) -> Result<(), git2::Error> {
     Ok(())
 }
 
+/// Display all known memo categories.
+///
+/// When `json_output` is true, the category names are printed as a JSON array.
+///
+/// # Parameters
+/// - `json_output`: Enable JSON output when set to `true`.
 pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
     let repo = open_repo()?;
     let refs = repo.references_glob("refs/memo/*")?;
@@ -131,6 +172,11 @@ pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
     Ok(())
 }
 
+/// Amend the latest memo commit for `category` with a new message.
+///
+/// # Parameters
+/// - `category`: The memo category containing the commit.
+/// - `message`: The new commit message.
 pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
@@ -156,6 +202,10 @@ pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     Ok(())
 }
 
+/// Move `refs/memo/<category>` to `refs/archive/<category>` if it exists.
+///
+/// # Parameters
+/// - `category`: The memo category to archive.
 pub fn archive_category(category: &str) -> Result<(), git2::Error> {
     let repo = open_repo()?;
     let src = format!("refs/memo/{category}");
