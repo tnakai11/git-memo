@@ -1,5 +1,7 @@
 use clap::{CommandFactory, Parser, Subcommand};
-use git_memo::{add_memo, archive_category, edit_memo, list_categories, list_memos, remove_memos};
+use git_memo::{
+    add_memo, archive_category, edit_memo, grep_memos, list_categories, list_memos, remove_memos,
+};
 
 /// Top-level command line interface for the git-memo application.
 #[derive(Parser)]
@@ -52,6 +54,11 @@ enum Commands {
         /// Category to archive
         category: String,
     },
+    /// Search memos matching a pattern
+    Grep {
+        /// Pattern to search for
+        pattern: String,
+    },
 }
 
 /// Application entry point.
@@ -85,5 +92,6 @@ fn handle_command(cmd: Commands) -> Result<(), git2::Error> {
         Commands::Categories { json } => list_categories(json),
         Commands::Edit { category, message } => edit_memo(&category, &message),
         Commands::Archive { category } => archive_category(&category),
+        Commands::Grep { pattern } => grep_memos(&pattern),
     }
 }
