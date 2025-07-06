@@ -22,6 +22,15 @@ $ git memo list todo
 
 # remove all todo memos
 $ git memo remove todo
+
+# list existing memo categories
+$ git memo categories
+
+# edit the latest memo message
+$ git memo edit todo "updated message"
+
+# archive a category
+$ git memo archive todo
 ```
 
 Each memo is an empty commit so repository history is unaffected. Categories live under their own refs and can be removed or archived independently.
