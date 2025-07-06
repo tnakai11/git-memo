@@ -144,7 +144,41 @@ fn errors_when_missing_git_config() {
         .args(["add", "todo", "msg"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("user.name and user.email"));
+        .stderr(predicate::str::contains("user.name must be set"));
+}
+
+#[test]
+fn adds_memo_without_email() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    // Set only user.name and use empty HOME so no global config provides email
+    let empty_home = tempdir().unwrap();
+    Command::new("git")
+        .env("HOME", empty_home.path())
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .env("HOME", empty_home.path())
+        .args(["add", "todo", "msg"])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%ae", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).contains("none"));
 }
 
 #[test]
