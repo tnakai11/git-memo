@@ -295,3 +295,30 @@ pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
     print!("{}", String::from_utf8_lossy(&output.stdout));
     Ok(())
 }
+
+/// Push all memo references to the given remote.
+///
+/// This runs `git push <remote> 'refs/memo/*:refs/memo/*'` and prints the
+/// command output.
+pub fn push_memos(remote: &str) -> Result<(), git2::Error> {
+    use std::path::Path;
+    use std::process::Command;
+
+    let repo = open_repo()?;
+    let workdir = repo.workdir().unwrap_or_else(|| Path::new("."));
+
+    let output = Command::new("git")
+        .args(["push", remote, "refs/memo/*:refs/memo/*"])
+        .current_dir(workdir)
+        .output()
+        .map_err(|e| git2::Error::from_str(&format!("Failed to run git push: {e}")))?;
+
+    if !output.status.success() {
+        return Err(git2::Error::from_str(&String::from_utf8_lossy(
+            &output.stderr,
+        )));
+    }
+
+    print!("{}", String::from_utf8_lossy(&output.stdout));
+    Ok(())
+}

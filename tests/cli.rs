@@ -534,3 +534,64 @@ fn handles_parallel_commits() {
         .unwrap();
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "2");
 }
+
+#[test]
+fn pushes_memos_to_remote() {
+    let dir = tempdir().unwrap();
+    let remote_dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["init", "--bare"])
+        .current_dir(&remote_dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args([
+            "remote",
+            "add",
+            "origin",
+            remote_dir.path().to_str().unwrap(),
+        ])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["push", "origin"])
+        .assert()
+        .success();
+
+    Command::new("git")
+        .args([
+            "--git-dir",
+            remote_dir.path().to_str().unwrap(),
+            "show-ref",
+            "--verify",
+            "--quiet",
+            "refs/memo/todo",
+        ])
+        .assert()
+        .success();
+}
