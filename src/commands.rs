@@ -29,6 +29,18 @@ pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
     git2::Signature::now(&name, &email)
 }
 
+/// Validate a memo category name using Git reference rules.
+///
+/// Returns `Ok(())` when the name is valid or a descriptive `Err` otherwise.
+pub fn validate_category(name: &str) -> Result<(), String> {
+    let refname = format!("refs/memo/{name}");
+    if git2::Reference::is_valid_name(&refname) {
+        Ok(())
+    } else {
+        Err(format!("Invalid category name: {name}"))
+    }
+}
+
 /// Add a memo as a Git commit under `refs/memo/<category>`.
 ///
 /// The commit author is determined from the repository's `user.name` and
@@ -51,6 +63,7 @@ pub fn make_signature(repo: &Repository) -> Result<Signature<'_>, git2::Error> {
 pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
     use std::io::Read;
 
+    validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
     let repo = open_repo()?;
 
     // Read message from stdin if requested
@@ -126,6 +139,7 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 /// - `category`: The memo category to display.
 /// - `json_output`: Enable JSON output when set to `true`.
 pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
+    validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     if repo.refname_to_id(&refname).is_err() {
@@ -157,6 +171,7 @@ pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> 
 /// # Parameters
 /// - `category`: The memo category to remove.
 pub fn remove_memos(category: &str) -> Result<(), git2::Error> {
+    validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     match repo.find_reference(&refname) {
@@ -206,6 +221,7 @@ pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
 /// - `category`: The memo category containing the commit.
 /// - `message`: The new commit message.
 pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
+    validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
     let repo = open_repo()?;
     let refname = format!("refs/memo/{category}");
     let oid = match repo.refname_to_id(&refname) {
@@ -235,6 +251,7 @@ pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 /// # Parameters
 /// - `category`: The memo category to archive.
 pub fn archive_category(category: &str) -> Result<(), git2::Error> {
+    validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
     let repo = open_repo()?;
     let src = format!("refs/memo/{category}");
     let dst = format!("refs/archive/{category}");
