@@ -483,3 +483,54 @@ fn greps_memos() {
         .stdout(predicate::str::contains("hello world"))
         .stdout(predicate::str::contains("another note").not());
 }
+
+#[test]
+fn handles_parallel_commits() {
+    use std::sync::{Arc, Barrier};
+    use std::thread;
+
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let barrier = Arc::new(Barrier::new(3));
+    let mut handles = Vec::new();
+    for msg in ["first", "second"] {
+        let b = barrier.clone();
+        let path = dir.path().to_path_buf();
+        handles.push(thread::spawn(move || {
+            let mut cmd = Command::cargo_bin("git-memo").unwrap();
+            b.wait();
+            cmd.current_dir(path)
+                .args(["add", "todo", msg])
+                .assert()
+                .success();
+        }));
+    }
+
+    barrier.wait();
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    let output = Command::new("git")
+        .args(["rev-list", "--count", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "2");
+}
