@@ -1,4 +1,3 @@
-
 use git2::{ErrorCode, Repository, Signature, Sort};
 use serde_json::json;
 
