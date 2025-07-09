@@ -64,7 +64,9 @@ where
     if output.status.success() {
         Ok(output)
     } else {
-        Err(git2::Error::from_str(&String::from_utf8_lossy(&output.stderr)))
+        Err(git2::Error::from_str(&String::from_utf8_lossy(
+            &output.stderr,
+        )))
     }
 }
 
