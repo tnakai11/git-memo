@@ -1,6 +1,9 @@
 use git2::{ErrorCode, Repository, Signature, Sort};
 use serde_json::json;
 
+use std::path::Path;
+use std::process::{Command, Output};
+
 use std::collections::BTreeSet;
 
 /// Discover the nearest Git repository starting from the current directory.
@@ -38,6 +41,32 @@ pub fn validate_category(name: &str) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("Invalid category name: {name}"))
+    }
+}
+
+/// Resolve the work tree directory for a repository.
+fn repo_workdir(repo: &Repository) -> &Path {
+    repo.workdir().unwrap_or_else(|| Path::new("."))
+}
+
+/// Run a `git` command inside `workdir` and return its output.
+fn run_git<I, S>(args: I, workdir: &Path, action: &str) -> Result<Output, git2::Error>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(workdir)
+        .output()
+        .map_err(|e| git2::Error::from_str(&format!("Failed to run git {action}: {e}")))?;
+
+    if output.status.success() {
+        Ok(output)
+    } else {
+        Err(git2::Error::from_str(&String::from_utf8_lossy(
+            &output.stderr,
+        )))
     }
 }
 
@@ -272,11 +301,8 @@ pub fn archive_category(category: &str) -> Result<(), git2::Error> {
 /// This runs `git log --grep=<pattern> refs/memo/*` and prints the matching
 /// commit messages to stdout.
 pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
-    use std::path::Path;
-    use std::process::Command;
-
     let repo = open_repo()?;
-    let workdir = repo.workdir().unwrap_or_else(|| Path::new("."));
+    let workdir = repo_workdir(&repo);
 
     let refs = repo.references_glob("refs/memo/*")?;
     let mut args = vec![
@@ -297,18 +323,7 @@ pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
         return Ok(());
     }
 
-    let output = Command::new("git")
-        .args(&args)
-        .current_dir(workdir)
-        .output()
-        .map_err(|e| git2::Error::from_str(&format!("Failed to run git log: {e}")))?;
-
-    if !output.status.success() {
-        return Err(git2::Error::from_str(&String::from_utf8_lossy(
-            &output.stderr,
-        )));
-    }
-
+    let output = run_git(&args, workdir, "log")?;
     print!("{}", String::from_utf8_lossy(&output.stdout));
     Ok(())
 }
@@ -318,24 +333,11 @@ pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
 /// This runs `git push <remote> 'refs/memo/*:refs/memo/*'` and prints the
 /// command output.
 pub fn push_memos(remote: &str) -> Result<(), git2::Error> {
-    use std::path::Path;
-    use std::process::Command;
-
     let repo = open_repo()?;
-    let workdir = repo.workdir().unwrap_or_else(|| Path::new("."));
+    let workdir = repo_workdir(&repo);
 
-    let output = Command::new("git")
-        .args(["push", remote, "refs/memo/*:refs/memo/*"])
-        .current_dir(workdir)
-        .output()
-        .map_err(|e| git2::Error::from_str(&format!("Failed to run git push: {e}")))?;
-
-    if !output.status.success() {
-        return Err(git2::Error::from_str(&String::from_utf8_lossy(
-            &output.stderr,
-        )));
-    }
-
+    let args = ["push", remote, "refs/memo/*:refs/memo/*"];
+    let output = run_git(args, workdir, "push")?;
     print!("{}", String::from_utf8_lossy(&output.stdout));
     Ok(())
 }
