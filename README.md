@@ -52,6 +52,13 @@ the category can be hidden without deleting its history.
 
 Each memo is an empty commit so repository history is unaffected. Categories live under their own refs and can be removed or archived independently.
 
+You can search memo messages across all categories using the `grep` subcommand:
+
+```bash
+$ git memo grep hello
+hello world
+```
+
 ## Organizing categories
 
 Categories are simple names under `refs/memo/`. Keep them short (e.g. `todo`, `idea`, `bug`) so that Git ref names remain valid. You can create as many categories as needed and list or remove them independently.
