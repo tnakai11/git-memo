@@ -48,6 +48,10 @@ $ git memo archive todo
 
 The archive command renames `refs/memo/todo` to `refs/archive/todo` so
 the category can be hidden without deleting its history.
+
+# list archived categories
+$ git memo archive-categories
+$ git memo archive-categories --json
 ```
 
 Each memo is an empty commit so repository history is unaffected. Categories live under their own refs and can be removed or archived independently.
