@@ -324,6 +324,91 @@ fn archives_category() {
 }
 
 #[test]
+fn lists_archive_categories() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "idea", "another"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["archive", "todo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .arg("archive-categories")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("todo"))
+        .stdout(predicate::str::contains("idea").not());
+}
+
+#[test]
+fn lists_archive_categories_json() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["archive", "todo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["archive-categories", "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("todo"))
+        .stdout(predicate::str::starts_with("["));
+}
+
+#[test]
 fn removes_memos() {
     let dir = tempdir().unwrap();
 
