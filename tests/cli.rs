@@ -8,7 +8,8 @@ fn shows_help() {
     cmd.arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("add"));
+        .stdout(predicate::str::contains("add"))
+        .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")));
 }
 
 #[test]

@@ -6,7 +6,13 @@ use git_memo::{
 
 /// Top-level command line interface for the git-memo application.
 #[derive(Parser)]
-#[command(name = "git-memo", about = "Record memos using Git")]
+#[command(
+    name = "git-memo",
+    about = "Record memos using Git",
+    version,
+    propagate_version = true,
+    help_template = "{name} {version}\n{about-with-newline}{usage-heading} {usage}\n\n{all-args}{after-help}"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
