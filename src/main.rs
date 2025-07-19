@@ -9,6 +9,7 @@ struct Cli {
     command: Option<Commands>,
 }
 
+/// Available subcommands for the CLI.
 #[derive(Subcommand)]
 enum Commands {
     /// Add a new memo
@@ -53,49 +54,36 @@ enum Commands {
     },
 }
 
+/// Application entry point.
 fn main() {
+    if let Err(e) = run() {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
+}
+
+/// Parse command line arguments and dispatch the requested subcommand.
+fn run() -> Result<(), git2::Error> {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Add { category, message }) => {
-            if let Err(e) = add_memo(&category, &message) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
-        Some(Commands::List { category, json }) => {
-            if let Err(e) = list_memos(&category, json) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
-        Some(Commands::Remove { category }) => {
-            if let Err(e) = remove_memos(&category) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
-        Some(Commands::Categories { json }) => {
-            if let Err(e) = list_categories(json) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
-        Some(Commands::Edit { category, message }) => {
-            if let Err(e) = edit_memo(&category, &message) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
-        Some(Commands::Archive { category }) => {
-            if let Err(e) = archive_category(&category) {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        }
+        Some(cmd) => handle_command(cmd),
         None => {
             // Default to showing help if no command is given
             Cli::command().print_help().unwrap();
+            Ok(())
         }
+    }
+}
+
+/// Execute an individual CLI command.
+fn handle_command(cmd: Commands) -> Result<(), git2::Error> {
+    match cmd {
+        Commands::Add { category, message } => add_memo(&category, &message),
+        Commands::List { category, json } => list_memos(&category, json),
+        Commands::Remove { category } => remove_memos(&category),
+        Commands::Categories { json } => list_categories(json),
+        Commands::Edit { category, message } => edit_memo(&category, &message),
+        Commands::Archive { category } => archive_category(&category),
     }
 }
