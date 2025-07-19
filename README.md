@@ -63,7 +63,7 @@ To share memos with collaborators or other agents, push the memo references just
 git push origin refs/memo/todo
 
 # push all memo categories
-git push origin 'refs/memo/*:refs/memo/*'
+git memo push origin
 ```
 
 Fetching works the same way and allows agents to sync their memory across machines.
@@ -71,7 +71,7 @@ Fetching works the same way and allows agents to sync their memory across machin
 ## Automating remote pushes
 
 For collaborative setups it's convenient to push memo references immediately
-after they are written. A helper script is available under
+after they are written. Run `git memo push <remote>` or use the helper script
 `scripts/push-memos.sh` which pushes all memo categories to a remote (defaults
 to `origin`). You can call this script manually or install it as a Git hook.
 
