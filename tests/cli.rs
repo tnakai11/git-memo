@@ -87,6 +87,130 @@ fn lists_memos() {
 }
 
 #[test]
+fn lists_categories() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "idea", "another"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .arg("categories")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("todo"))
+        .stdout(predicate::str::contains("idea"));
+}
+
+#[test]
+fn edits_latest_memo() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["edit", "todo", "edited memo"])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%s", "refs/memo/todo"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).contains("edited memo"));
+}
+
+#[test]
+fn archives_category() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["archive", "todo"])
+        .assert()
+        .success();
+
+    Command::new("git")
+        .args(["show-ref", "--verify", "--quiet", "refs/memo/todo"])
+        .current_dir(&dir)
+        .assert()
+        .failure();
+    Command::new("git")
+        .args(["show-ref", "--verify", "--quiet", "refs/archive/todo"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+}
+
+#[test]
 fn removes_memos() {
     let dir = tempdir().unwrap();
 
