@@ -244,6 +244,35 @@ pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
     Ok(())
 }
 
+/// Display all archived memo categories.
+///
+/// When `json_output` is true, the category names are printed as a JSON array.
+///
+/// # Parameters
+/// - `json_output`: Enable JSON output when set to `true`.
+pub fn list_archive_categories(json_output: bool) -> Result<(), git2::Error> {
+    let repo = open_repo()?;
+    let refs = repo.references_glob("refs/archive/*")?;
+    let mut categories = BTreeSet::new();
+    for reference in refs {
+        let reference = reference?;
+        if let Some(cat) = reference
+            .name()
+            .and_then(|name| name.strip_prefix("refs/archive/"))
+        {
+            categories.insert(cat.to_string());
+        }
+    }
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&categories).unwrap());
+    } else {
+        for cat in categories {
+            println!("{cat}");
+        }
+    }
+    Ok(())
+}
+
 /// Amend the latest memo commit for `category` with a new message.
 ///
 /// # Parameters
