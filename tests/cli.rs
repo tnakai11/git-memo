@@ -507,9 +507,17 @@ fn handles_parallel_commits() {
         .assert()
         .success();
 
-    let barrier = Arc::new(Barrier::new(3));
+    let msgs = ["first", "second"];
+    // Seed the reference so concurrent additions must handle a parent commit.
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "initial"])
+        .assert()
+        .success();
+
+    let barrier = Arc::new(Barrier::new(msgs.len() + 1));
     let mut handles = Vec::new();
-    for msg in ["first", "second"] {
+    for msg in msgs {
         let b = barrier.clone();
         let path = dir.path().to_path_buf();
         handles.push(thread::spawn(move || {
@@ -528,11 +536,13 @@ fn handles_parallel_commits() {
     }
 
     let output = Command::new("git")
-        .args(["rev-list", "--count", "refs/memo/todo"])
+        .args(["log", "--format=%s", "refs/memo/todo"])
         .current_dir(&dir)
         .output()
         .unwrap();
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "2");
+    let log = String::from_utf8_lossy(&output.stdout);
+    assert!(log.contains("first"));
+    assert!(log.contains("second"));
 }
 
 #[test]
