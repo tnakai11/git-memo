@@ -10,7 +10,7 @@ The idea is to treat the repository as a lightweight journal. Whenever you want 
 
 ```
 # record a memo under refs/memo/todo
-$ git memo todo "Finish writing README"
+$ git memo add todo "Finish writing README"
 
 # show the log of todo memos
 $ git log refs/memo/todo
