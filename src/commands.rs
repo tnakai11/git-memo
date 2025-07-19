@@ -101,7 +101,10 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
                 if e.class() == ErrorClass::Reference
                     && matches!(
                         e.code(),
-                        ErrorCode::NotFastForward | ErrorCode::Modified | ErrorCode::Locked
+                        ErrorCode::NotFastForward
+                            | ErrorCode::Modified
+                            | ErrorCode::Locked
+                            | ErrorCode::Exists
                     )
                     && attempt + 1 < max_attempts =>
             {
