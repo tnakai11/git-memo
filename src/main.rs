@@ -1,6 +1,7 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use git_memo::{add_memo, archive_category, edit_memo, list_categories, list_memos, remove_memos};
 
+/// Top-level command line interface for the git-memo application.
 #[derive(Parser)]
 #[command(name = "git-memo", about = "Record memos using Git")]
 struct Cli {
