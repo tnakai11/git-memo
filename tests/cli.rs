@@ -45,3 +45,71 @@ fn adds_memo_commit() {
         .unwrap();
     assert!(String::from_utf8_lossy(&output.stdout).contains("first memo"));
 }
+
+#[test]
+fn lists_memos() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    // add a memo
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    // list memos
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["list", "todo"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("first memo"));
+}
+
+#[test]
+fn removes_memos() {
+    let dir = tempdir().unwrap();
+
+    Command::new("git").arg("init").current_dir(&dir).assert().success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&dir)
+        .assert()
+        .success();
+
+    // add and then remove memo
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["add", "todo", "first memo"])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&dir)
+        .args(["remove", "todo"])
+        .assert()
+        .success();
+
+    Command::new("git")
+        .args(["show-ref", "--verify", "--quiet", "refs/memo/todo"])
+        .current_dir(&dir)
+        .assert()
+        .failure();
+}

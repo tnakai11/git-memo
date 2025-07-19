@@ -16,6 +16,16 @@ enum Commands {
         /// Memo message
         message: String,
     },
+    /// List memos for a category
+    List {
+        /// Category to list
+        category: String,
+    },
+    /// Remove all memos for a category
+    Remove {
+        /// Category to remove
+        category: String,
+    },
 }
 
 fn main() {
@@ -24,6 +34,18 @@ fn main() {
     match cli.command {
         Some(Commands::Add { category, message }) => {
             if let Err(e) = add_memo(&category, &message) {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+        }
+        Some(Commands::List { category }) => {
+            if let Err(e) = list_memos(&category) {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+        }
+        Some(Commands::Remove { category }) => {
+            if let Err(e) = remove_memos(&category) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -69,5 +91,43 @@ Run `git config --global user.name <name>` and `git config --global user.email <
 
     let commit_oid = repo.commit(Some(&refname), &sig, &sig, message, &tree, &parents)?;
     println!("Recorded memo {commit_oid} under {refname}");
+    Ok(())
+}
+
+fn list_memos(category: &str) -> Result<(), git2::Error> {
+    use git2::{Repository, Sort};
+
+    let repo = Repository::discover(".")?;
+    let refname = format!("refs/memo/{category}");
+    if repo.refname_to_id(&refname).is_err() {
+        println!("No memos found for category {category}");
+        return Ok(());
+    }
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(Sort::REVERSE)?;
+    revwalk.push_ref(&refname)?;
+    for oid in revwalk {
+        let oid = oid?;
+        let commit = repo.find_commit(oid)?;
+        let message = commit.summary().unwrap_or("");
+        println!("{oid} {message}");
+    }
+    Ok(())
+}
+
+fn remove_memos(category: &str) -> Result<(), git2::Error> {
+    use git2::Repository;
+
+    let repo = Repository::discover(".")?;
+    let refname = format!("refs/memo/{category}");
+    match repo.find_reference(&refname) {
+        Ok(mut reference) => {
+            reference.delete()?;
+            println!("Removed {refname}");
+        }
+        Err(_) => {
+            println!("No memos found for category {category}");
+        }
+    }
     Ok(())
 }
