@@ -1,4 +1,4 @@
-use git2::{Repository, Signature, Sort};
+use git2::{ErrorClass, ErrorCode, Repository, Signature, Sort};
 use serde_json::json;
 
 use std::collections::BTreeSet;
@@ -85,15 +85,35 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 
     // Parent is refs/memo/<category> if exists
     let refname = format!("refs/memo/{category}");
-    let parent = repo
-        .refname_to_id(&refname)
-        .ok()
-        .and_then(|oid| repo.find_commit(oid).ok());
-    let parents = parent.iter().collect::<Vec<_>>();
+    let max_attempts = 5;
+    for attempt in 0..max_attempts {
+        let parent = repo
+            .refname_to_id(&refname)
+            .ok()
+            .and_then(|oid| repo.find_commit(oid).ok());
+        let parents = parent.iter().collect::<Vec<_>>();
+        match repo.commit(Some(&refname), &sig, &sig, message, &tree, &parents) {
+            Ok(oid) => {
+                println!("Recorded memo {oid} under {refname}");
+                return Ok(());
+            }
+            Err(e)
+                if e.class() == ErrorClass::Reference
+                    && matches!(
+                        e.code(),
+                        ErrorCode::NotFastForward | ErrorCode::Modified | ErrorCode::Locked
+                    )
+                    && attempt + 1 < max_attempts =>
+            {
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
+    }
 
-    let commit_oid = repo.commit(Some(&refname), &sig, &sig, message, &tree, &parents)?;
-    println!("Recorded memo {commit_oid} under {refname}");
-    Ok(())
+    Err(git2::Error::from_str(&format!(
+        "Failed to update {refname} after {max_attempts} attempts"
+    )))
 }
 
 /// Print all memos recorded for `category`.
