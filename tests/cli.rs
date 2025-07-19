@@ -441,7 +441,7 @@ fn errors_on_invalid_category() {
         .args(["add", "bad category", "msg"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("not valid"));
+        .stderr(predicate::str::contains("Invalid category name"));
 }
 
 #[test]
