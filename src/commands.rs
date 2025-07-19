@@ -1,4 +1,4 @@
-use git2::{ErrorClass, ErrorCode, Repository, Signature, Sort};
+use git2::{ErrorCode, Repository, Signature, Sort};
 use serde_json::json;
 
 use std::collections::BTreeSet;
@@ -98,15 +98,13 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
                 return Ok(());
             }
             Err(e)
-                if e.class() == ErrorClass::Reference
-                    && matches!(
-                        e.code(),
-                        ErrorCode::NotFastForward
-                            | ErrorCode::Modified
-                            | ErrorCode::Locked
-                            | ErrorCode::Exists
-                    )
-                    && attempt + 1 < max_attempts =>
+                if matches!(
+                    e.code(),
+                    ErrorCode::NotFastForward
+                        | ErrorCode::Modified
+                        | ErrorCode::Locked
+                        | ErrorCode::Exists
+                ) && attempt + 1 < max_attempts =>
             {
                 continue;
             }
