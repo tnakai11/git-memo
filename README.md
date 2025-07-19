@@ -1,12 +1,12 @@
 # git-memo
 
-`git memo` is a CLI tool for recording short notes directly in your repository using Git itself. Notes are saved as empty commits organized under special references, making it easy to browse or replay them chronologically by category. It aims to provide efficient, stable memory for long‑lived agents such as LLM assistants that operate over a code base.
+`git memo` is a CLI tool for recording short notes directly in your repository using Git itself. Each note is stored as an empty commit under a dedicated reference so you can browse or replay memos in order by category. This provides a lightweight way to keep memos alongside your code without any external database.
 
 ## Vision
 
 The idea is to treat the repository as a lightweight journal. Whenever you want to capture an idea or task, you run a command that creates an empty commit whose message is your memo. Categories such as `todo` or `idea` are tracked under references like `refs/memo/todo`. Because memos are commits, they can be pushed, pulled and searched with standard Git tools.
 
-By storing memos in Git, agents gain a stable history that survives checkouts or merges. This is particularly useful for language model agents that need persistent context without relying on external databases.
+Because memos live in Git, their history survives checkouts or merges. This lets any tooling or team share notes through normal Git operations without a separate service.
 
 ## Example workflow
 
@@ -67,7 +67,7 @@ hello world
 
 Categories are simple names under `refs/memo/`. Keep them short (e.g. `todo`, `idea`, `bug`) so that Git ref names remain valid. You can create as many categories as needed and list or remove them independently.
 
-To share memos with collaborators or other agents, push the memo references just like branches:
+To share memos with collaborators or automation, push the memo references just like branches:
 
 ```
 # push a single category
@@ -77,7 +77,7 @@ git push origin refs/memo/todo
 git memo push origin
 ```
 
-Fetching works the same way and allows agents to sync their memory across machines.
+Fetching works the same way so notes stay in sync across machines.
 
 ## Automating remote pushes
 
