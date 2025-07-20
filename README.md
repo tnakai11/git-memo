@@ -63,6 +63,8 @@ $ git memo grep hello
 hello world
 ```
 
+Pass `--repo <PATH>` to work with a different repository from any location.
+
 ## Organizing categories
 
 Categories are simple names under `refs/memo/`. Keep them short (e.g. `todo`, `idea`, `bug`) so that Git ref names remain valid. You can create as many categories as needed and list or remove them independently.

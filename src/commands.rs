@@ -1,17 +1,26 @@
 use git2::{ErrorCode, Repository, Signature, Sort};
 use serde_json::json;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use std::collections::BTreeSet;
 
-/// Discover the nearest Git repository starting from the current directory.
+/// Open a Git repository at the given path.
 ///
-/// This is a small wrapper around [`Repository::discover`] that searches
-/// parent directories until a repository is found.
-pub fn open_repo() -> Result<Repository, git2::Error> {
-    Repository::discover(".")
+/// When `path` is `None`, the current directory is used. If the directory does
+/// not contain a `.git` directory, a helpful message is printed and the process
+/// exits with code `1`.
+pub fn open_repo(path: Option<PathBuf>) -> Result<Repository, git2::Error> {
+    let repo_path = path.unwrap_or_else(|| PathBuf::from("."));
+    if !repo_path.join(".git").is_dir() {
+        eprintln!(
+            "{} is not a Git repository. Run `git init` to create one.",
+            repo_path.display()
+        );
+        std::process::exit(1);
+    }
+    Repository::open(repo_path)
 }
 
 /// Create a signature using the repository's `user.name` and `user.email`.
@@ -85,15 +94,19 @@ where
 /// use git_memo::add_memo;
 ///
 /// fn main() -> Result<(), git2::Error> {
-///     add_memo("todo", "write docs")?;
+///     add_memo(None, "todo", "write docs")?;
 ///     Ok(())
 /// }
 /// ```
-pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
+pub fn add_memo(
+    repo_path: Option<PathBuf>,
+    category: &str,
+    message: &str,
+) -> Result<(), git2::Error> {
     use std::io::Read;
 
     validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
-    let repo = open_repo()?;
+    let repo = open_repo(repo_path)?;
 
     // Read message from stdin if requested
     let mut stdin_message = String::new();
@@ -167,9 +180,13 @@ pub fn add_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 /// # Parameters
 /// - `category`: The memo category to display.
 /// - `json_output`: Enable JSON output when set to `true`.
-pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> {
+pub fn list_memos(
+    repo_path: Option<PathBuf>,
+    category: &str,
+    json_output: bool,
+) -> Result<(), git2::Error> {
     validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
-    let repo = open_repo()?;
+    let repo = open_repo(repo_path)?;
     let refname = format!("refs/memo/{category}");
     if repo.refname_to_id(&refname).is_err() {
         println!("No memos found for category {category}");
@@ -199,9 +216,9 @@ pub fn list_memos(category: &str, json_output: bool) -> Result<(), git2::Error> 
 ///
 /// # Parameters
 /// - `category`: The memo category to remove.
-pub fn remove_memos(category: &str) -> Result<(), git2::Error> {
+pub fn remove_memos(repo_path: Option<PathBuf>, category: &str) -> Result<(), git2::Error> {
     validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
-    let repo = open_repo()?;
+    let repo = open_repo(repo_path)?;
     let refname = format!("refs/memo/{category}");
     match repo.find_reference(&refname) {
         Ok(mut reference) => {
@@ -221,8 +238,8 @@ pub fn remove_memos(category: &str) -> Result<(), git2::Error> {
 ///
 /// # Parameters
 /// - `json_output`: Enable JSON output when set to `true`.
-pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
-    let repo = open_repo()?;
+pub fn list_categories(repo_path: Option<PathBuf>, json_output: bool) -> Result<(), git2::Error> {
+    let repo = open_repo(repo_path)?;
     let refs = repo.references_glob("refs/memo/*")?;
     let mut categories = BTreeSet::new();
     for reference in refs {
@@ -250,8 +267,11 @@ pub fn list_categories(json_output: bool) -> Result<(), git2::Error> {
 ///
 /// # Parameters
 /// - `json_output`: Enable JSON output when set to `true`.
-pub fn list_archive_categories(json_output: bool) -> Result<(), git2::Error> {
-    let repo = open_repo()?;
+pub fn list_archive_categories(
+    repo_path: Option<PathBuf>,
+    json_output: bool,
+) -> Result<(), git2::Error> {
+    let repo = open_repo(repo_path)?;
     let refs = repo.references_glob("refs/archive/*")?;
     let mut categories = BTreeSet::new();
     for reference in refs {
@@ -278,9 +298,13 @@ pub fn list_archive_categories(json_output: bool) -> Result<(), git2::Error> {
 /// # Parameters
 /// - `category`: The memo category containing the commit.
 /// - `message`: The new commit message.
-pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
+pub fn edit_memo(
+    repo_path: Option<PathBuf>,
+    category: &str,
+    message: &str,
+) -> Result<(), git2::Error> {
     validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
-    let repo = open_repo()?;
+    let repo = open_repo(repo_path)?;
     let refname = format!("refs/memo/{category}");
     let oid = match repo.refname_to_id(&refname) {
         Ok(id) => id,
@@ -308,9 +332,9 @@ pub fn edit_memo(category: &str, message: &str) -> Result<(), git2::Error> {
 ///
 /// # Parameters
 /// - `category`: The memo category to archive.
-pub fn archive_category(category: &str) -> Result<(), git2::Error> {
+pub fn archive_category(repo_path: Option<PathBuf>, category: &str) -> Result<(), git2::Error> {
     validate_category(category).map_err(|e| git2::Error::from_str(&e))?;
-    let repo = open_repo()?;
+    let repo = open_repo(repo_path)?;
     let src = format!("refs/memo/{category}");
     let dst = format!("refs/archive/{category}");
     match repo.find_reference(&src) {
@@ -329,8 +353,8 @@ pub fn archive_category(category: &str) -> Result<(), git2::Error> {
 ///
 /// This runs `git log --grep=<pattern> refs/memo/*` and prints the matching
 /// commit messages to stdout.
-pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
-    let repo = open_repo()?;
+pub fn grep_memos(repo_path: Option<PathBuf>, pattern: &str) -> Result<(), git2::Error> {
+    let repo = open_repo(repo_path)?;
     let workdir = repo_workdir(&repo);
 
     let refs = repo.references_glob("refs/memo/*")?;
@@ -361,8 +385,8 @@ pub fn grep_memos(pattern: &str) -> Result<(), git2::Error> {
 ///
 /// This runs `git push <remote> 'refs/memo/*:refs/memo/*'` and prints the
 /// command output.
-pub fn push_memos(remote: &str) -> Result<(), git2::Error> {
-    let repo = open_repo()?;
+pub fn push_memos(repo_path: Option<PathBuf>, remote: &str) -> Result<(), git2::Error> {
+    let repo = open_repo(repo_path)?;
     let workdir = repo_workdir(&repo);
 
     let args = ["push", remote, "refs/memo/*:refs/memo/*"];
