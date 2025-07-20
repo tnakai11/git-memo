@@ -110,7 +110,7 @@ rustup default stable
 Then clone the repository and build the release binary:
 
 ```sh
-git clone https://github.com/yourname/git-memo.git
+git clone https://github.com/actual-owner/git-memo.git
 cd git-memo
 cargo build --release
 ```
