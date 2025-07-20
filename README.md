@@ -99,20 +99,42 @@ repository.
 
 ## Setup
 
-The project is planned as a Rust CLI distributed through Cargo:
+First install the Rust toolchain with
+[rustup](https://rustup.rs) if it is not already available:
 
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup default stable
 ```
-$ cargo build --release
+
+Then clone the repository and build the release binary:
+
+```sh
+git clone https://github.com/actual-owner/git-memo.git
+cd git-memo
+cargo build --release
 ```
 
-Once built, make sure the resulting binary is in your PATH so you can call `git memo`.
+The resulting executable resides at `target/release/git-memo`. Add this
+location to your `PATH` or install it system-wide:
 
-Before recording memos, configure your Git username so commits can be created.
-Setting `user.email` is optional:
-
+```sh
+cargo install --path .
 ```
-$ git config --global user.name "Your Name"
-$ git config --global user.email "you@example.com" # optional
+
+Optionally install the helper script as a post-commit hook so memo refs are
+pushed automatically:
+
+```sh
+ln -s ../../scripts/push-memos.sh .git/hooks/post-commit
+```
+
+Before recording memos, configure your Git username. Setting `user.email` is
+optional:
+
+```sh
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com" # optional
 ```
 
 ## Dependencies
