@@ -691,3 +691,148 @@ fn pushes_memos_to_remote() {
         .assert()
         .success();
 }
+
+#[test]
+fn adds_memo_with_relative_repo_path() {
+    let base = tempdir().unwrap();
+    let repo = base.path().join("repo");
+    std::fs::create_dir(&repo).unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&base)
+        .args(["--repo", "repo", "add", "todo", "msg"])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%s", "refs/memo/todo"])
+        .current_dir(&repo)
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).contains("msg"));
+}
+
+#[test]
+fn adds_memo_with_absolute_repo_path() {
+    let repo = tempdir().unwrap();
+    let cwd = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&cwd)
+        .args([
+            "--repo",
+            repo.path().to_str().unwrap(),
+            "add",
+            "todo",
+            "msg",
+        ])
+        .assert()
+        .success();
+
+    let output = Command::new("git")
+        .args(["log", "-1", "--format=%s", "refs/memo/todo"])
+        .current_dir(&repo)
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).contains("msg"));
+}
+
+#[test]
+fn pushes_memos_with_repo_flag() {
+    let repo = tempdir().unwrap();
+    let remote_dir = tempdir().unwrap();
+    let cwd = tempdir().unwrap();
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["init", "--bare"])
+        .current_dir(&remote_dir)
+        .assert()
+        .success();
+    Command::new("git")
+        .args([
+            "remote",
+            "add",
+            "origin",
+            remote_dir.path().to_str().unwrap(),
+        ])
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(&repo)
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&cwd)
+        .args([
+            "--repo",
+            repo.path().to_str().unwrap(),
+            "add",
+            "todo",
+            "first memo",
+        ])
+        .assert()
+        .success();
+
+    let mut cmd = Command::cargo_bin("git-memo").unwrap();
+    cmd.current_dir(&cwd)
+        .args(["--repo", repo.path().to_str().unwrap(), "push", "origin"])
+        .assert()
+        .success();
+
+    Command::new("git")
+        .args([
+            "--git-dir",
+            remote_dir.path().to_str().unwrap(),
+            "show-ref",
+            "--verify",
+            "--quiet",
+            "refs/memo/todo",
+        ])
+        .assert()
+        .success();
+}
